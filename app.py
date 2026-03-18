@@ -107,6 +107,7 @@ def parse_jotform(data):
         "city":          get("q14_city"),
         "state":         get("q15_state"),
         "mission":       get("q26_organizationMission"),
+        "years_in_op":   get("q45_howLong45"),
     }
 
 
@@ -126,6 +127,15 @@ def create_organization(fields, today):
         properties["Organizational Mission"] = {
             "rich_text": [{"text": {"content": fields["mission"]}}]
         }
+    if fields.get("years_in_op"):
+        try:
+            properties["Years in operation"] = {"number": float(fields["years_in_op"])}
+        except ValueError:
+            pass
+    if fields.get("how_connected"):
+        properties["How did you hear about ĒMA?"] = {
+            "rich_text": [{"text": {"content": fields["how_connected"]}}]
+        }
 
     return notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
 
@@ -144,6 +154,10 @@ def create_contact(fields, org_id=None):
         }
     if org_id:
         properties["Organization"] = {"relation": [{"id": org_id}]}
+    if fields.get("address"):
+        properties["Shipping Address"] = {
+            "rich_text": [{"text": {"content": fields["address"]}}]
+        }
 
     return notion.pages.create(parent={"database_id": CONTACTS_DB_ID}, properties=properties)
 
