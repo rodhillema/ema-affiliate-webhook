@@ -107,41 +107,6 @@ def parse_jotform(data):
         "city":          get("q14_city"),
         "state":         get("q15_state"),
         "mission":       get("q26_organizationMission"),
-        "years_op":      get("q45_howLong45"),
-    }
-
-
-def create_organization(fields, today):
-    properties = {
-        "Name": {"title": [{"text": {"content": fields["org_name"]}}]},
-        "Phase": {"status": {"name": "Research"}},
-        "Interest Call Date": {"date": {"start": today}},
-    }
-    # Website is rich_text in Organizations (not url type)
-    if fields.get("website"):
-        properties["Website"] = {
-            "rich_text": [{"text": {"content": fields["website"]}}]
-        }
-    if fields.get("address"):
-        properties["Address"] = {
-            "rich_text": [{"text": {"content": fields["address"]}}]
-        }
-    if fields.get("mission"):
-        properties["Organizational Mission"] = {
-            "rich_text": [{"text": {"content": fields["mission"]}}]
-        }
-    if fields.get("how_connected"):
-        properties["How did you hear about \u0112MA?"] = {
-            "rich_text": [{"text": {"content": fields["how_connected"]}}]
-        }
-    if fields.get("years_op"):
-        try:
-            # Exact property name from schema: "Years in operation  " (two trailing spaces)
-            properties["Years in operation  "] = {
-                "number": float(fields["years_op"])
-            }
-        except (ValueError, TypeError):
-            pass
 
     return notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
 
