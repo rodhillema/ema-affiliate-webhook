@@ -37,6 +37,18 @@ def debug_orgs_schema():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/debug/orgs-raw", methods=["GET"])
+def debug_orgs_raw():
+    try:
+        db = notion.databases.retrieve(database_id=ORGS_DB_ID)
+        result = {}
+        for k in db["properties"].keys():
+            result[repr(k)] = list(k.encode("utf-8"))
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -138,11 +150,6 @@ def create_organization(fields, today):
         properties["Organizational Mission"] = {
             "rich_text": [{"text": {"content": fields["mission"]}}]
         }
-    if fields.get("years_in_op"):
-        try:
-            properties["Years in operation  "] = {"number": float(fields["years_in_op"])}
-        except ValueError:
-            pass
     if fields.get("how_connected"):
         properties["How did you hear about ĒMA?"] = {
             "rich_text": [{"text": {"content": fields["how_connected"]}}]
