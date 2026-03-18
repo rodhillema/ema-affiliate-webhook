@@ -27,7 +27,17 @@ def health():
     return jsonify({"status": "ok"})
 
 
-@app.route("/webhook", methods=["POST"])
+@app.route("/debug/orgs-schema", methods=["GET"])
+def debug_orgs_schema():
+    try:
+        db = notion.databases.retrieve(database_id=ORGS_DB_ID)
+        props = {k: v["type"] for k, v in db["properties"].items()}
+        return jsonify(props)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 def webhook():
     try:
         data = request.form.to_dict() if request.form else request.get_json(silent=True) or {}
@@ -127,15 +137,16 @@ def create_organization(fields, today):
         properties["Organizational Mission"] = {
             "rich_text": [{"text": {"content": fields["mission"]}}]
         }
-    if fields.get("years_in_op"):
-        try:
-            properties["Years in operation"] = {"number": float(fields["years_in_op"])}
-        except ValueError:
-            pass
-    if fields.get("how_connected"):
-        properties["How did you hear about ĒMA?"] = {
-            "rich_text": [{"text": {"content": fields["how_connected"]}}]
-        }
+    # "Years in operation" property name needs verification - has special char or space in Notion
+    # if fields.get("years_in_op"):
+    #     try:
+    #         properties["Years in operation"] = {"number": float(fields["years_in_op"])}
+    #     except ValueError:
+    #         pass
+    # if fields.get("how_connected"):
+    #     properties["How did you hear about ĒMA?"] = {
+    #         "rich_text": [{"text": {"content": fields["how_connected"]}}]
+    #     }
 
     return notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
 
