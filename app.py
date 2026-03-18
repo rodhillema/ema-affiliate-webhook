@@ -150,6 +150,11 @@ def create_organization(fields, today):
         properties["Organizational Mission"] = {
             "rich_text": [{"text": {"content": fields["mission"]}}]
         }
+    if fields.get("years_in_op"):
+        try:
+            properties["Years in operation\xa0 "] = {"number": float(fields["years_in_op"])}
+        except ValueError:
+            pass
     if fields.get("how_connected"):
         properties["How did you hear about ĒMA?"] = {
             "rich_text": [{"text": {"content": fields["how_connected"]}}]
