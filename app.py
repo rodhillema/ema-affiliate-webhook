@@ -115,13 +115,15 @@ def create_organization(fields, today):
         "Name": {"title": [{"text": {"content": fields["org_name"]}}]},
     }
     if fields.get("website"):
-        properties["Website"] = {"url": fields["website"]}
+        properties["Website"] = {
+            "rich_text": [{"text": {"content": fields["website"]}}]
+        }
     if fields.get("address"):
         properties["Address"] = {
             "rich_text": [{"text": {"content": fields["address"]}}]
         }
     if fields.get("mission"):
-        properties["Mission"] = {
+        properties["Organizational Mission"] = {
             "rich_text": [{"text": {"content": fields["mission"]}}]
         }
 
