@@ -45,8 +45,7 @@ def webhook():
 
 
 def parse_jotform(data):
-    """Extract fields from Jotform POST data."""
-    # Jotform sometimes nests data in rawRequest
+    """Extract fields using exact field names confirmed from Railway logs."""
     raw = data
     if "rawRequest" in data:
         try:
@@ -57,82 +56,78 @@ def parse_jotform(data):
     def get(*keys):
         for k in keys:
             v = raw.get(k, "")
+            if isinstance(v, list):
+                v = ", ".join(str(i) for i in v if i)
             if isinstance(v, dict):
-                # Handle name fields like {"first": "Jane", "last": "Doe"}
-                parts = [v.get("first", ""), v.get("last", "")]
-                v = " ".join(p for p in parts if p)
+                v = v.get("full", "") or (v.get("first", "") + " " + v.get("last", "")).strip()
             if v:
                 return str(v).strip()
         return ""
 
-    first = get("q3_name[first]", "q3_name", "firstName", "first_name")
-    last = get("q3_name[last]", "lastName", "last_name")
-    full_name = f"{first} {last}".strip() or get("name", "q3_name", "fullName") or "Unknown"
-
     return {
-        "full_name": full_name,
-        "email": get("q4_email", "email", "q5_email", "q4_email[0]"),
-        "phone": get("q5_phone", "phone", "q6_phone"),
-        "org_name": get("q6_organization", "q7_organization", "organization", "orgName", "q8_organization"),
-        "how_connected": get("q7_howConnected", "howConnected", "how_connected", "q9_howConnected"),
-        "message": get("q10_message", "message", "q11_message", "comments", "q8_message"),
-        "submission_date": data.get("submissionDate") or data.get("submission_date") or datetime.utcnow().strftime("%Y-%m-%d"),
+        "full_name": get("q1_nameOf") or "Unknown",
+        "job_title": get("q3_jobTitle"),
+        "email": get("q9_emailAddress"),
+        "phone": get("q44_phoneNumber44"),
+        "org_name": get("q11_organizationName"),
+        "website": get("q17_organizationWebsite"),
+        "how_connected": get("q19_howDid"),
+        "role": get("q5_howWould"),
+        "city": get("q14_city"),
+        "state": get("q15_state"),
+        "mission": get("q26_organizationMission"),
+        "submission_date": datetime.utcnow().strftime("%Y-%m-%d"),
     }
 
 
 def create_lead(fields):
-    """Create a record in the Leads database with the correct Notion property names."""
-    org_name = fields["org_name"] or fields["full_name"] or "Unknown"
+    """Create a record in the Leads database with correct Notion property names."""
+    org_name = fields.get("org_name") or fields.get("full_name") or "Unknown"
+    full_name = fields.get("full_name") or ""
+
+    contact_parts = [p for p in [full_name, fields.get("job_title"), ", ".join(filter(None, [fields.get("city"), fields.get("state")]))] if p]
+    contact_display = " - ".join(contact_parts) if contact_parts else full_name
 
     properties = {
-        # Title field (Notion has a typo: "Oraganization")
-        "Oraganization": {
+        "Oraganization": {  # Notion typo — must match exactly
             "title": [{"text": {"content": org_name}}]
         }
     }
 
-    if fields["full_name"]:
-        properties["Lead Contact "] = {  # Note the trailing space — it's in Notion
-            "rich_text": [{"text": {"content": fields["full_name"]}}]
+    if contact_display:
+        properties["Lead Contact "] = {  # Trailing space is in Notion
+            "rich_text": [{"text": {"content": contact_display}}]
         }
 
-    if fields["email"]:
-        properties["Lead Contact Email"] = {
-            "email": fields["email"]
-        }
+    if fields.get("email"):
+        properties["Lead Contact Email"] = {"email": fields["email"]}
 
-    if fields["how_connected"]:
+    if fields.get("how_connected"):
         properties["How Connected"] = {
             "rich_text": [{"text": {"content": fields["how_connected"]}}]
         }
 
-    # Set Initial Conversation to today's date
-    today = datetime.utcnow().strftime("%Y-%m-%d")
     properties["Initial Conversation"] = {
-        "date": {"start": today}
+        "date": {"start": datetime.utcnow().strftime("%Y-%m-%d")}
     }
 
-    # Add message to page body if present
-    children = []
-    if fields["message"]:
-        children = [
-            {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [
-                        {"type": "text", "text": {"content": "Message from form:\n" + fields["message"]}}
-                    ]
-                }
-            }
-        ]
+    body_lines = []
+    if fields.get("role"):
+        body_lines.append(f"Role: {fields['role']}")
+    if fields.get("phone"):
+        body_lines.append(f"Phone: {fields['phone']}")
+    if fields.get("website"):
+        body_lines.append(f"Website: {fields['website']}")
+    if fields.get("mission"):
+        body_lines.append(f"Mission: {fields['mission']}")
 
-    kwargs = {
-        "parent": {"database_id": LEADS_DB_ID},
-        "properties": properties,
-    }
-    if children:
-        kwargs["children"] = children
+    kwargs = {"parent": {"database_id": LEADS_DB_ID}, "properties": properties}
+    if body_lines:
+        kwargs["children"] = [{
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {"rich_text": [{"type": "text", "text": {"content": "\n".join(body_lines)}}]}
+        }]
 
     return notion.pages.create(**kwargs)
 
