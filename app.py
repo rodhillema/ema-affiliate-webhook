@@ -38,6 +38,7 @@ def debug_orgs_schema():
 
 
 
+@app.route("/webhook", methods=["POST"])
 def webhook():
     try:
         data = request.form.to_dict() if request.form else request.get_json(silent=True) or {}
