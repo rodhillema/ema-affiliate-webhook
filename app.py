@@ -16,8 +16,13 @@ LEADS_DB_ID = os.environ.get("NOTION_AFFILIATE_DB_ID")  # Leads database
 
 
 @app.route("/", methods=["GET"])
-def health():
+def index():
     return jsonify({"status": "EMA Affiliate Webhook running", "timestamp": datetime.utcnow().isoformat()})
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"})
 
 
 @app.route("/webhook", methods=["POST"])
