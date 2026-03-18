@@ -137,16 +137,15 @@ def create_organization(fields, today):
         properties["Organizational Mission"] = {
             "rich_text": [{"text": {"content": fields["mission"]}}]
         }
-    # "Years in operation" property name needs verification - has special char or space in Notion
-    # if fields.get("years_in_op"):
-    #     try:
-    #         properties["Years in operation"] = {"number": float(fields["years_in_op"])}
-    #     except ValueError:
-    #         pass
-    # if fields.get("how_connected"):
-    #     properties["How did you hear about ĒMA?"] = {
-    #         "rich_text": [{"text": {"content": fields["how_connected"]}}]
-    #     }
+    if fields.get("years_in_op"):
+        try:
+            properties["Years in operation  "] = {"number": float(fields["years_in_op"])}
+        except ValueError:
+            pass
+    if fields.get("how_connected"):
+        properties["How did you hear about ĒMA?"] = {
+            "rich_text": [{"text": {"content": fields["how_connected"]}}]
+        }
 
     return notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
 
