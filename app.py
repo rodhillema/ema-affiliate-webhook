@@ -38,6 +38,7 @@ def webhook():
 
         today = datetime.utcnow().strftime("%Y-%m-%d")
         results = {}
+        org_id = None
 
         # 1. Create Organization
         try:
@@ -47,7 +48,6 @@ def webhook():
             logger.info(f"Created org: {org_id}")
         except Exception as e:
             logger.error(f"Org creation failed: {e}")
-            org_id = None
 
         # 2. Create Contact (linked to org if available)
         try:
@@ -117,18 +117,30 @@ def create_organization(fields, today):
         "Phase": {"status": {"name": "Research"}},
         "Interest Call Date": {"date": {"start": today}},
     }
+    # Website is rich_text in Organizations (not url type)
     if fields.get("website"):
-        properties["Website"] = {"url": fields["website"]}
+        properties["Website"] = {
+            "rich_text": [{"text": {"content": fields["website"]}}]
+        }
     if fields.get("address"):
-        properties["Address"] = {"rich_text": [{"text": {"content": fields["address"]}}]}
+        properties["Address"] = {
+            "rich_text": [{"text": {"content": fields["address"]}}]
+        }
     if fields.get("mission"):
-        properties["Organizational Mission"] = {"rich_text": [{"text": {"content": fields["mission"]}}]}
+        properties["Organizational Mission"] = {
+            "rich_text": [{"text": {"content": fields["mission"]}}]
+        }
     if fields.get("how_connected"):
-        properties["How did you hear about ĒMA?"] = {"rich_text": [{"text": {"content": fields["how_connected"]}}]}
+        properties["How did you hear about \u0112MA?"] = {
+            "rich_text": [{"text": {"content": fields["how_connected"]}}]
+        }
     if fields.get("years_op"):
         try:
-            properties["Years in operation  "] = {"number": float(fields["years_op"])}
-        except ValueError:
+            # Exact property name from schema: "Years in operation  " (two trailing spaces)
+            properties["Years in operation  "] = {
+                "number": float(fields["years_op"])
+            }
+        except (ValueError, TypeError):
             pass
 
     return notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
@@ -143,9 +155,10 @@ def create_contact(fields, org_id=None):
     if fields.get("phone"):
         properties["Phone Number"] = {"phone_number": fields["phone"]}
     if fields.get("job_title"):
-        properties["Internal Org Title"] = {"rich_text": [{"text": {"content": fields["job_title"]}}]}
+        properties["Internal Org Title"] = {
+            "rich_text": [{"text": {"content": fields["job_title"]}}]
+        }
     if org_id:
-        # Use page ID (not URL) for relation
         properties["Organization"] = {"relation": [{"id": org_id}]}
 
     return notion.pages.create(parent={"database_id": CONTACTS_DB_ID}, properties=properties)
@@ -164,11 +177,15 @@ def create_lead(fields, today):
         "Initial Conversation": {"date": {"start": today}},
     }
     if contact_display:
-        properties["Lead Contact "] = {"rich_text": [{"text": {"content": contact_display}}]}
+        properties["Lead Contact "] = {
+            "rich_text": [{"text": {"content": contact_display}}]
+        }
     if fields.get("email"):
         properties["Lead Contact Email"] = {"email": fields["email"]}
     if fields.get("how_connected"):
-        properties["How Connected"] = {"rich_text": [{"text": {"content": fields["how_connected"]}}]}
+        properties["How Connected"] = {
+            "rich_text": [{"text": {"content": fields["how_connected"]}}]
+        }
 
     return notion.pages.create(parent={"database_id": LEADS_DB_ID}, properties=properties)
 
