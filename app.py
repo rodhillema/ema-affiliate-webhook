@@ -131,7 +131,37 @@ def parse_jotform(data):
         "state":         get("q15_state"),
         "mission":       get("q26_organizationMission"),
         "years_in_op":   get("q45_howLong45"),
+        "vision":        get("q27_organizationVision"),
+        "core_values":   get("q28_organizationCore"),
+        "core_programs": get("q29_brieflyDescribe"),
+        "clients":       get("q30_brieflyDescribe30"),
+        "referrals":     get("q31_howDo"),
+        "volunteers":    get("q32_brieflyDescribe32"),
+        "ema_interest":  get("q33_whatInterests"),
+        "ema_gap":       get("q43_whatNeed43"),
+        "foster_crisis": get("q34_howDoes"),
+        "church_role":   get("q35_whatRole"),
+        "faith_comfort": get("q36_isYour"),
     }
+
+
+def _make_block(heading, value):
+    return [
+        {
+            "object": "block",
+            "type": "heading_3",
+            "heading_3": {
+                "rich_text": [{"type": "text", "text": {"content": heading}}]
+            }
+        },
+        {
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [{"type": "text", "text": {"content": value}}]
+            }
+        }
+    ]
 
 
 def create_organization(fields, today):
@@ -160,7 +190,31 @@ def create_organization(fields, today):
             "rich_text": [{"text": {"content": fields["how_connected"]}}]
         }
 
-    return notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
+    page = notion.pages.create(parent={"database_id": ORGS_DB_ID}, properties=properties)
+
+    qa_fields = [
+        ("Organization vision statement",                                    fields.get("vision")),
+        ("Organization Core Values",                                         fields.get("core_values")),
+        ("Briefly describe your core programs of service",                   fields.get("core_programs")),
+        ("Briefly describe the majority of clients you serve",               fields.get("clients")),
+        ("How do clients hear about your program / main referral partners",  fields.get("referrals")),
+        ("Briefly describe your current volunteer opportunities",             fields.get("volunteers")),
+        ("What interests you about the ĒMA program and model",          fields.get("ema_interest")),
+        ("What need or gap could the ĒMA program solve",                fields.get("ema_gap")),
+        ("How does your organization understand the foster care crisis",      fields.get("foster_crisis")),
+        ("What role do you see the church playing in supporting families",    fields.get("church_role")),
+        ("Is your organization comfortable working with communities of faith",fields.get("faith_comfort")),
+    ]
+
+    blocks = []
+    for heading, value in qa_fields:
+        if value:
+            blocks.extend(_make_block(heading, value))
+
+    if blocks:
+        notion.blocks.children.append(block_id=page["id"], children=blocks)
+
+    return page
 
 
 def create_contact(fields, org_id=None):
